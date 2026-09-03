@@ -85,6 +85,7 @@ Run Claude Code from `build-battle/` and you get:
 |---|---|
 | `/spec` | Turns a ticket into a plan that cites real files. Run it before you build |
 | `/pr` | Writes the pull request description from your branch, the ticket, and the spec |
+| `/submit` | Pushes your branch to your fork and opens the pull request against this repo. Run it again after each change |
 | `/ship-ready` | Pre-push check: money math, UTC handling, duplicate logic, unvalidated input |
 | `bug-investigator` | A read-only subagent that diagnoses a bug report and returns a written root-cause analysis. It cannot edit anything, which is the point |
 
