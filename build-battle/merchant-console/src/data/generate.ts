@@ -1,5 +1,7 @@
+import { CARD_CATEGORIES, generateCardNumber } from "@/lib/cards"
 import { merchants } from "./merchants"
 import {
+  Card,
   Currency,
   Dispute,
   Payment,
@@ -148,7 +150,76 @@ export function generate() {
   }
 
   const payouts = generatePayouts(payments)
-  return { payments, refunds, disputes, payouts }
+  const cards = generateCards()
+  return { payments, refunds, disputes, payouts, cards }
+}
+
+const CARD_NICKNAMES = [
+  "Ad spend",
+  "SaaS subscriptions",
+  "Contractor payouts",
+  "Conference travel",
+  "Vendor tools",
+]
+
+/**
+ * A handful of deterministic virtual cards so the list, detail, and spend
+ * bar have something to show without issuing one first. One of each status,
+ * and one over the 80% spend threshold the detail page flags amber.
+ */
+function generateCards(): Card[] {
+  const daysAgo = (days: number) =>
+    new Date(GENERATED_AT.getTime() - days * 86_400_000).toISOString()
+
+  const seeds: {
+    daysAgo: number
+    limit: number
+    spent: number
+    status: Card["status"]
+    frozenDaysAgo?: number
+    cancelledDaysAgo?: number
+  }[] = [
+    { daysAgo: 40, limit: 50_000, spent: 12_400, status: "active" },
+    { daysAgo: 25, limit: 20_000, spent: 17_800, status: "active" },
+    { daysAgo: 60, limit: 100_000, spent: 34_000, status: "frozen", frozenDaysAgo: 10 },
+    {
+      daysAgo: 90,
+      limit: 15_000,
+      spent: 15_000,
+      status: "cancelled",
+      frozenDaysAgo: 30,
+      cancelledDaysAgo: 5,
+    },
+  ]
+
+  return seeds.map((seed, index) => {
+    const merchant = merchants[index % merchants.length]
+    const number = generateCardNumber(rand)
+    const createdAt = daysAgo(seed.daysAgo)
+
+    const history: Card["history"] = [{ status: "active", at: createdAt }]
+    if (seed.frozenDaysAgo !== undefined) {
+      history.push({ status: "frozen", at: daysAgo(seed.frozenDaysAgo) })
+    }
+    if (seed.cancelledDaysAgo !== undefined) {
+      history.push({ status: "cancelled", at: daysAgo(seed.cancelledDaysAgo) })
+    }
+
+    return {
+      id: `card_${pad(index + 1)}`,
+      nickname: CARD_NICKNAMES[index % CARD_NICKNAMES.length],
+      merchantId: merchant.id,
+      last4: number.slice(-4),
+      reference: `ref_${pad(index + 1)}`,
+      limit: seed.limit,
+      spent: seed.spent,
+      currency: merchant.currency,
+      status: seed.status,
+      category: CARD_CATEGORIES[index % CARD_CATEGORIES.length],
+      createdAt,
+      history,
+    }
+  })
 }
 
 function generatePayouts(payments: Payment[]): Payout[] {
